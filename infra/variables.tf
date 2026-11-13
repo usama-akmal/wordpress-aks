@@ -10,3 +10,9 @@ variable "location" {
   type        = string
   default     = "westus2"
 }
+
+variable "ssh_public_key_path" {
+  description = "Local path to the administrator SSH public key."
+  type        = string
+  default     = "~/.ssh/wordpress-aks-lab.pub"
+}
