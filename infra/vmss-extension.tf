@@ -1,3 +1,10 @@
+locals {
+  web_setup_script = join("\n", [
+    file("${path.module}/../scripts/install-web-stack.sh"),
+    file("${path.module}/../scripts/install-wordpress.sh")
+  ])
+}
+
 resource "azurerm_virtual_machine_scale_set_extension" "web_stack" {
   name                         = "install-web-stack"
   virtual_machine_scale_set_id = azurerm_linux_virtual_machine_scale_set.wordpress.id
@@ -8,11 +15,11 @@ resource "azurerm_virtual_machine_scale_set_extension" "web_stack" {
   auto_upgrade_minor_version = true
 
   protected_settings = jsonencode({
-    commandToExecute = "printf '%s' '${filebase64("${path.module}/../scripts/install-web-stack.sh")}' | base64 --decode > /var/tmp/install-web-stack.sh && bash /var/tmp/install-web-stack.sh"
+    commandToExecute = "printf '%s' '${base64encode(local.web_setup_script)}' | base64 --decode > /var/tmp/setup-wordpress.sh && bash /var/tmp/setup-wordpress.sh"
   })
 
   force_update_tag = substr(
-    filesha256("${path.module}/../scripts/install-web-stack.sh"),
+    sha256(local.web_setup_script),
     0,
     40
   )
