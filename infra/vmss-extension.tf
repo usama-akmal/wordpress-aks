@@ -1,7 +1,13 @@
 locals {
   web_setup_script = join("\n", [
     file("${path.module}/../scripts/install-web-stack.sh"),
-    file("${path.module}/../scripts/install-wordpress.sh")
+    file("${path.module}/../scripts/install-wordpress.sh"),
+    templatefile(
+      "${path.module}/../scripts/configure-wordpress-secrets.sh.tftpl",
+      {
+        vault_name = azurerm_key_vault.project.name
+      }
+    )
   ])
 }
 
@@ -23,4 +29,8 @@ resource "azurerm_virtual_machine_scale_set_extension" "web_stack" {
     0,
     40
   )
+
+  depends_on = [
+    azurerm_role_assignment.wordpress_secret_reader
+  ]
 }
