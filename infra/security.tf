@@ -1,6 +1,6 @@
 resource "azurerm_network_security_group" "application" {
   name                = "nsg-wordpress-vm"
-  location            = data.azurerm_resource_group.project.location
+  location            = var.location
   resource_group_name = data.azurerm_resource_group.project.name
 
   security_rule {

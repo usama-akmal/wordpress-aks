@@ -1,12 +1,12 @@
 data "azurerm_client_config" "current" {}
 
 locals {
-  key_vault_name = "kv-wp-${substr(sha1(data.azurerm_resource_group.project.id), 0, 12)}"
+  key_vault_name = "kv-wp-wus2-${substr(sha1(data.azurerm_resource_group.project.id), 0, 10)}"
 }
 
 resource "azurerm_key_vault" "project" {
   name                = local.key_vault_name
-  location            = data.azurerm_resource_group.project.location
+  location            = var.location
   resource_group_name = data.azurerm_resource_group.project.name
 
   tenant_id = data.azurerm_client_config.current.tenant_id

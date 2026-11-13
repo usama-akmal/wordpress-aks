@@ -1,6 +1,6 @@
 resource "azurerm_public_ip" "nat" {
   name                = "pip-final-project-nat"
-  location            = data.azurerm_resource_group.project.location
+  location            = var.location
   resource_group_name = data.azurerm_resource_group.project.name
 
   allocation_method = "Static"
@@ -13,7 +13,7 @@ resource "azurerm_public_ip" "nat" {
 
 resource "azurerm_nat_gateway" "application" {
   name                = "nat-final-project"
-  location            = data.azurerm_resource_group.project.location
+  location            = var.location
   resource_group_name = data.azurerm_resource_group.project.name
 
   sku_name                = "Standard"

@@ -4,3 +4,9 @@ variable "mysql_admin_password" {
   sensitive   = true
   ephemeral   = true
 }
+
+variable "location" {
+  description = "Azure region for the project workload."
+  type        = string
+  default     = "westus2"
+}

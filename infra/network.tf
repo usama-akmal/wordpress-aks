@@ -1,6 +1,6 @@
 resource "azurerm_virtual_network" "project" {
   name                = "vnet-final-project"
-  location            = data.azurerm_resource_group.project.location
+  location            = var.location
   resource_group_name = data.azurerm_resource_group.project.name
   address_space       = ["10.40.0.0/16"]
 
@@ -28,6 +28,10 @@ resource "azurerm_subnet" "database" {
   resource_group_name  = data.azurerm_resource_group.project.name
   virtual_network_name = azurerm_virtual_network.project.name
   address_prefixes     = ["10.40.3.0/27"]
+
+  service_endpoint {
+    service = "Microsoft.Storage"
+  }
 
   delegation {
     name = "mysql-delegation"
