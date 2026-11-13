@@ -1,0 +1,31 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Terraform local files and state
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
+crash.log
+crash.*.log
+
+# Local credentials
+kubeconfig
+kubeconfig.*
+*.pem
+*.key
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Local working files
+work/
+.DS_Store
