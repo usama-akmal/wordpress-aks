@@ -7,6 +7,12 @@ locals {
       {
         vault_name = azurerm_key_vault.project.name
       }
+    ),
+    templatefile(
+      "${path.module}/../scripts/configure-wordpress-site.sh.tftpl",
+      {
+        mysql_hostname = azurerm_mysql_flexible_server.project.fqdn
+      }
     )
   ])
 }

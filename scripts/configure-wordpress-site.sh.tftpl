@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+install -d -o root -g www-data -m 750 /etc/wordpress
+
+# Generate authentication keys once; preserve them on subsequent runs.
+if [ ! -f /etc/wordpress/salts.json ]; then
+  python3 - <<'PY'
+import json
+import secrets
+
+names = (
+    "AUTH_KEY", "SECURE_AUTH_KEY", "LOGGED_IN_KEY", "NONCE_KEY",
+    "AUTH_SALT", "SECURE_AUTH_SALT", "LOGGED_IN_SALT", "NONCE_SALT",
+)
+
+with open("/etc/wordpress/salts.json", "x") as target:
+    json.dump({name: secrets.token_hex(64) for name in names}, target)
+PY
+fi
+
+chown root:www-data /etc/wordpress/salts.json
+chmod 640 /etc/wordpress/salts.json
+
+cat > /var/www/wordpress/wp-config.php <<'PHP'
+<?php
+define('DB_NAME', 'wordpress');
+define('DB_USER', 'wpapp');
+define('DB_PASSWORD', file_get_contents('/run/wordpress/db-password'));
+define('DB_HOST', '${mysql_hostname}');
+define('DB_CHARSET', 'utf8mb4');
+define('DB_COLLATE', '');
+
+define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL);
+
+$salts = json_decode(
+    file_get_contents('/etc/wordpress/salts.json'),
+    true,
+    512,
+    JSON_THROW_ON_ERROR
+);
+
+foreach ($salts as $name => $value) {
+    define($name, $value);
+}
+unset($salts, $name, $value);
+
+$table_prefix = 'wp_';
+
+define('WP_DEBUG', false);
+define('DISALLOW_FILE_EDIT', true);
+
+if (!defined('ABSPATH')) {
+    define('ABSPATH', __DIR__ . '/');
+}
+
+require_once ABSPATH . 'wp-settings.php';
+PHP
+
+chown root:www-data /var/www/wordpress/wp-config.php
+chmod 640 /var/www/wordpress/wp-config.php
+
+cat > /etc/apache2/sites-available/wordpress.conf <<'APACHE'
+<VirtualHost *:80>
+    ServerName wordpress.local
+    DocumentRoot /var/www/wordpress
+    DirectoryIndex index.php
+
+    <Directory /var/www/wordpress>
+        Options -Indexes +FollowSymLinks
+        AllowOverride None
+        Require all granted
+        FallbackResource /index.php
+    </Directory>
+
+    <Files "wp-config.php">
+        Require all denied
+    </Files>
+
+    <Directory /var/www/wordpress/wp-content/uploads>
+        <FilesMatch "\.(php[0-9]?|phtml|phar)$">
+            Require all denied
+        </FilesMatch>
+    </Directory>
+
+    ErrorLog /var/log/apache2/wordpress-error.log
+    CustomLog /var/log/apache2/wordpress-access.log combined
+</VirtualHost>
+APACHE
+
+# Test database access as the same OS user that runs WordPress.
+cat > /usr/local/libexec/wordpress-check-db.php <<'PHP'
+<?php
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+try {
+    $db = mysqli_init();
+
+    mysqli_ssl_set(
+        $db, null, null,
+        '/etc/ssl/certs/ca-certificates.crt',
+        null, null
+    );
+    mysqli_options($db, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
+
+    mysqli_real_connect(
+        $db,
+        '${mysql_hostname}',
+        'wpapp',
+        file_get_contents('/run/wordpress/db-password'),
+        'wordpress',
+        3306,
+        null,
+        MYSQLI_CLIENT_SSL
+    );
+
+    $result = $db->query("SHOW SESSION STATUS LIKE 'Ssl_cipher'");
+    $row = $result->fetch_row();
+
+    if (empty($row[1])) {
+        throw new RuntimeException('Missing TLS cipher');
+    }
+
+    echo "WORDPRESS-database-TLS-check-passed\n";
+} catch (Throwable $error) {
+    fwrite(STDERR, "WordPress database TLS check failed.\n");
+    exit(1);
+}
+PHP
+
+runuser -u www-data -- \
+  php /usr/local/libexec/wordpress-check-db.php
+
+php -l /var/www/wordpress/wp-config.php
+
+a2dissite 000-default
+a2ensite wordpress
+apache2ctl configtest
+systemctl restart apache2
+
+curl --fail --silent --show-error \
+  --location \
+  --max-redirs 5 \
+  --output /dev/null \
+  http://127.0.0.1/wp-admin/install.php
+
+echo "WORDPRESS-installer-check-passed"
