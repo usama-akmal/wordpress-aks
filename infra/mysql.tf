@@ -1,5 +1,5 @@
 resource "azurerm_mysql_flexible_server" "project" {
-  name = "mysql-wp-${substr(sha1(data.azurerm_resource_group.project.id), 0, 12)}"
+  name = "mysql-wp-${var.location}-${substr(sha1(data.azurerm_resource_group.project.id), 0, 12)}"
 
   location            = var.location
   resource_group_name = data.azurerm_resource_group.project.name
