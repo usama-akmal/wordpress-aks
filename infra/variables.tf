@@ -16,3 +16,10 @@ variable "ssh_public_key_path" {
   type        = string
   default     = "~/.ssh/wordpress-aks-lab.pub"
 }
+
+variable "wordpress_db_password" {
+  description = "Password for the dedicated WordPress database user."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}
