@@ -23,3 +23,9 @@ variable "wordpress_db_password" {
   sensitive   = true
   ephemeral   = true
 }
+
+variable "enable_db_bootstrap" {
+  description = "Temporarily allow the VM to read the MySQL administrator secret."
+  type        = bool
+  default     = false
+}
