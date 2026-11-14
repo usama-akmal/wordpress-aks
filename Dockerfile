@@ -1,5 +1,9 @@
 FROM wordpress@sha256:8b64037bb2a3bdc41bebccb165f20ad5e4c786b684ae4a2bd5981f98aa1eb107
 
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # Bake application code into the image before dropping privileges.
 RUN set -eux; \
     cp -a /usr/src/wordpress/. /var/www/html/; \
