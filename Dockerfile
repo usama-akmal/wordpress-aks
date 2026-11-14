@@ -14,6 +14,8 @@ RUN set -eux; \
 
 COPY docker/apache-wordpress.conf /etc/apache2/sites-available/000-default.conf
 
+COPY --chown=0:33 --chmod=640 docker/wp-config.php /var/www/html/wp-config.php
+
 WORKDIR /var/www/html
 
 # Debian's www-data identity, expressed numerically for Kubernetes validation.

@@ -3,3 +3,4 @@
 !.dockerignore
 !docker/
 !docker/apache-wordpress.conf
+!docker/wp-config.php
