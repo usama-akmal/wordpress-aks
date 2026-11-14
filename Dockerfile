@@ -1,0 +1,26 @@
+FROM wordpress@sha256:8b64037bb2a3bdc41bebccb165f20ad5e4c786b684ae4a2bd5981f98aa1eb107
+
+# Bake application code into the image before dropping privileges.
+RUN set -eux; \
+    cp -a /usr/src/wordpress/. /var/www/html/; \
+    chown -R root:root /var/www/html; \
+    find /var/www/html -type d -exec chmod 755 {} +; \
+    find /var/www/html -type f -exec chmod 644 {} +; \
+    mkdir -p /var/www/html/wp-content/uploads \
+        /var/run/apache2 /var/lock/apache2 /var/log/apache2; \
+    chown -R www-data:www-data /var/www/html/wp-content/uploads \
+        /var/run/apache2 /var/lock/apache2 /var/log/apache2; \
+    sed -i 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf
+
+COPY docker/apache-wordpress.conf /etc/apache2/sites-available/000-default.conf
+
+WORKDIR /var/www/html
+
+# Debian's www-data identity, expressed numerically for Kubernetes validation.
+USER 33:33
+
+EXPOSE 8080
+
+# Application code is already present; runtime config will be supplied separately.
+ENTRYPOINT []
+CMD ["apache2-foreground"]
