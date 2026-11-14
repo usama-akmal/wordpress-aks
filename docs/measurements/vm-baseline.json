@@ -1,0 +1,27 @@
+{
+  "label": "vm-baseline",
+  "url": "http://wp-36536035c2eb.westus2.cloudapp.azure.com",
+  "started_at_utc": "2026-11-14T11:29:15.818486+00:00",
+  "finished_at_utc": "2026-11-14T11:30:00.715379+00:00",
+  "client_platform": "macOS-26.6.2-arm64-arm-64bit",
+  "samples": 30,
+  "warmup_requests": 3,
+  "concurrency": 1,
+  "pause_seconds": 0.2,
+  "socket_timeout_seconds": 10,
+  "successes": 30,
+  "failures": 0,
+  "error_rate_percent": 0.0,
+  "latency_scope": "Successful final 2xx responses, including full HTML body; redirects followed.",
+  "mean_ms": 1152.275,
+  "median_ms": 1144.444,
+  "p95_ms": 1325.657,
+  "min_ms": 1048.798,
+  "max_ms": 1331.377,
+  "limitations": [
+    "Small sequential sample; no concurrent load or capacity measurement.",
+    "Does not fetch images, JavaScript, or CSS or measure browser rendering.",
+    "Public-network latency and cache state affect results.",
+    "p95 uses nearest rank over successful requests only; failures are reported separately."
+  ]
+}
