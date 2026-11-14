@@ -29,3 +29,5 @@ __pycache__/
 # Local working files
 work/
 .DS_Store
+
+.local/

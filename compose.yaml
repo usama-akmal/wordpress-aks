@@ -1,0 +1,68 @@
+name: wordpress-local
+
+services:
+  db:
+    image: ${MYSQL_IMAGE:?Run scripts/prepare-local.py first}
+    platform: linux/amd64
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wpapp
+      MYSQL_PASSWORD_FILE: /run/secrets/wordpress-db-password
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql-root-password
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    secrets:
+      - mysql-root-password
+      - wordpress-db-password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "--host=127.0.0.1", "--silent"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 18
+
+  wordpress:
+    image: wordpress-aks:local
+    pull_policy: never
+    platform: linux/amd64
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wpapp
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/wordpress-db-password
+      WORDPRESS_SALTS_FILE: /run/secrets/wordpress-salts
+      # Development-only database on the private local Compose network.
+      # Keep TLS enabled when connecting to Azure MySQL.
+      WORDPRESS_DB_SSL: "false"
+      WORDPRESS_ENVIRONMENT_TYPE: local
+      WORDPRESS_HOME: http://localhost:8080
+      WORDPRESS_SITEURL: http://localhost:8080
+    secrets:
+      - wordpress-db-password
+      - wordpress-salts
+    volumes:
+      - wordpress_uploads:/var/www/html/wp-content/uploads
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+secrets:
+  mysql-root-password:
+    file: ./.local/secrets/mysql-root-password
+  wordpress-db-password:
+    file: ./.local/secrets/wordpress-db-password
+  wordpress-salts:
+    file: ./.local/secrets/wordpress-salts
+
+volumes:
+  mysql_data:
+  wordpress_uploads:
