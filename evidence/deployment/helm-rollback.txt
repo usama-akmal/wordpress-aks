@@ -1,0 +1,8 @@
+REVISION	UPDATED                 	STATUS    	CHART          	APP VERSION	DESCRIPTION     
+3       	Sun Nov 15 10:28:38 2026	superseded	wordpress-0.1.0	           	Upgrade complete
+4       	Sun Nov 15 12:20:56 2026	superseded	wordpress-0.1.0	           	Upgrade complete
+5       	Sun Nov 15 17:25:16 2026	superseded	wordpress-0.1.0	           	Rollback to 3   
+6       	Sun Nov 15 17:25:49 2026	deployed  	wordpress-0.1.0	           	Rollback to 4   
+
+Restored image matches revision 4: acrwp3bb7d6f791f7.azurecr.io/wordpress@sha256:78e185974f700a61efb00d48b7f419d46bb3c8a89b2b469d8acc59869387500a
+WordPress readiness after restore: ready
