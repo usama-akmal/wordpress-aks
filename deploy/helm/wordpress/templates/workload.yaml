@@ -1,0 +1,107 @@
+{{- $image := required "image is required" .Values.image -}}
+{{- if not (regexMatch "@sha256:[a-f0-9]{64}$" $image) -}}
+{{- fail "image must be a full image reference pinned to a sha256 digest" -}}
+{{- end -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wordpress
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wordpress
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        azure.workload.identity/use: "true"
+      annotations:
+        checksum/runtime: {{ include (print $.Template.BasePath "/runtime.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: wordpress
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: wordpress
+          image: {{ $image | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-runtime
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /wp-includes/css/dashicons.min.css
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /ready.php
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: uploads
+              mountPath: /var/www/html/wp-content/uploads
+            - name: keyvault
+              mountPath: /mnt/secrets-store
+              readOnly: true
+            - name: readiness
+              mountPath: /var/www/html/ready.php
+              subPath: ready.php
+              readOnly: true
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-uploads
+        - name: keyvault
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ .Release.Name }}-keyvault
+        - name: readiness
+          configMap:
+            name: {{ .Release.Name }}-readiness
+            items:
+              - key: ready.php
+                path: ready.php
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: wordpress
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

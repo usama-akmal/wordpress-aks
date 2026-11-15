@@ -1,0 +1,8 @@
+image: "acrwp3bb7d6f791f7.azurecr.io/wordpress@sha256:81e8141ab465b51ceda39eed27e1e624b9a18e8eb361ca481ebcbb9bc0201a6e"
+database:
+  host: mysql-wp-westus2-36536035c2eb.mysql.database.azure.com
+keyVault:
+  name: kv-wp-wus2-36536035c2
+  clientId: "ad0f81d5-df94-4c8f-9827-9aab9225f5f5"
+  tenantId: "a7a2dc3d-d5f7-4e0c-99a2-48a4c37c37a0"
+  dbPasswordSecret: "wordpress-db-password"

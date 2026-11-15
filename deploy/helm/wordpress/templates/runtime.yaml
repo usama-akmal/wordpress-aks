@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: wordpress
+  annotations:
+    azure.workload.identity/client-id: {{ required "keyVault.clientId is required" .Values.keyVault.clientId | quote }}
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: {{ .Release.Name }}-keyvault
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    clientID: {{ .Values.keyVault.clientId | quote }}
+    keyvaultName: {{ required "keyVault.name is required" .Values.keyVault.name | quote }}
+    tenantId: {{ required "keyVault.tenantId is required" .Values.keyVault.tenantId | quote }}
+    objects: |
+      array:
+        - |
+          objectName: {{ required "keyVault.dbPasswordSecret is required" .Values.keyVault.dbPasswordSecret | quote }}
+          objectAlias: wordpress-db-password
+          objectType: secret
+        - |
+          objectName: wordpress-salts
+          objectType: secret
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-runtime
+data:
+  WORDPRESS_DB_HOST: {{ required "database.host is required" .Values.database.host | quote }}
+  WORDPRESS_DB_NAME: wordpress
+  WORDPRESS_DB_USER: wpapp
+  WORDPRESS_DB_SSL: "true"
+  WORDPRESS_DB_PASSWORD_FILE: /mnt/secrets-store/wordpress-db-password
+  WORDPRESS_SALTS_FILE: /mnt/secrets-store/wordpress-salts
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-readiness
+data:
+  ready.php: |
+    <?php
+    http_response_code(503);
+    header('Content-Type: text/plain; charset=UTF-8');
+    define('SHORTINIT', true);
+    require __DIR__ . '/wp-load.php';
+
+    $wpdb->suppress_errors(true);
+    $site = $wpdb->get_var("SELECT option_id FROM {$wpdb->options} WHERE option_name = 'siteurl'");
+    if ($site === null) {
+        exit;
+    }
+
+    http_response_code(200);
+    echo "ready\n";
