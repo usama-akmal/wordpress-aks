@@ -1,0 +1,8 @@
+diff --git a/deploy/helm/wordpress/templates/workload.yaml b/deploy/helm/wordpress/templates/workload.yaml
+--- a/deploy/helm/wordpress/templates/workload.yaml
++++ b/deploy/helm/wordpress/templates/workload.yaml
+@@ -48,3 +48,3 @@
+             limits:
+               cpu: 500m
+-              memory: 384Mi
++              memory: 448Mi

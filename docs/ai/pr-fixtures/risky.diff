@@ -1,0 +1,18 @@
+diff --git a/deploy/helm/wordpress/templates/workload.yaml b/deploy/helm/wordpress/templates/workload.yaml
+--- a/deploy/helm/wordpress/templates/workload.yaml
++++ b/deploy/helm/wordpress/templates/workload.yaml
+@@ -30,3 +30,3 @@
+       containers:
+         - name: wordpress
+-          image: {{ $image | quote }}
++          image: example.azurecr.io/wordpress:latest
+@@ -55,8 +55,8 @@
+           livenessProbe:
+             httpGet:
+-              path: /wp-includes/css/dashicons.min.css
++              path: /ready.php
+             periodSeconds: 15
+             timeoutSeconds: 3
+           readinessProbe:
+             httpGet:
+               path: /ready.php
