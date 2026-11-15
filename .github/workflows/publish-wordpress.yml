@@ -1,8 +1,12 @@
-name: Publish WordPress image
+name: Publish and deploy WordPress
 
 on:
   push:
     branches: [main]
+
+concurrency:
+  group: wordpress-aks-main
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -57,6 +61,7 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Push and lock the image
+        id: publish_image
         run: |
           registry_name="${ACR_LOGIN_SERVER%%.*}"
           image_tag="$IMAGE_NAME:$IMAGE_TAG"
@@ -70,5 +75,58 @@ jobs:
 
           digest="$(az acr repository show --name "$registry_name" \
             --image "$image_tag" --query digest --output tsv)"
-          printf 'Published image: `%s/%s@%s`\n' \
-            "$ACR_LOGIN_SERVER" "$IMAGE_NAME" "$digest" >> "$GITHUB_STEP_SUMMARY"
+          if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            echo "::error::ACR did not return a valid image digest."
+            exit 1
+          fi
+
+          image="$ACR_LOGIN_SERVER/$IMAGE_NAME@$digest"
+          printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"
+          printf 'Published image: %s\n' "$image" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install kubectl, kubelogin, and Helm
+        run: |
+          tools_dir="$RUNNER_TEMP/wordpress-tools"
+          mkdir -p "$tools_dir"
+
+          az aks install-cli \
+            --client-version 1.36.5 \
+            --install-location "$tools_dir/kubectl" \
+            --kubelogin-version 0.2.21 \
+            --kubelogin-install-location "$tools_dir/kubelogin"
+
+          helm_archive="$tools_dir/helm-v4.2.1-linux-amd64.tar.gz"
+          curl --fail --silent --show-error --location --retry 3 \
+            https://get.helm.sh/helm-v4.2.1-linux-amd64.tar.gz \
+            --output "$helm_archive"
+          printf '%s  %s\n' \
+            479dca836e5b45e8bd222400c5591b0e3a647378f03ff96597180db97c17fdae \
+            "$helm_archive" | sha256sum --check
+          tar -xzf "$helm_archive" -C "$tools_dir" linux-amd64/helm
+          mv "$tools_dir/linux-amd64/helm" "$tools_dir/helm"
+          printf '%s\n' "$tools_dir" >> "$GITHUB_PATH"
+
+      - name: Deploy the published image through Helm
+        env:
+          PUBLISHED_IMAGE: ${{ steps.publish_image.outputs.image }}
+          KUBECONFIG: ${{ runner.temp }}/wordpress-kubeconfig
+        run: |
+          az aks get-credentials \
+            --resource-group rg-k8s-lab --name aks-k8s-lab \
+            --file "$KUBECONFIG" --overwrite-existing
+          kubelogin convert-kubeconfig -l azurecli
+
+          helm upgrade wordpress deploy/helm/wordpress \
+            --namespace wordpress \
+            --values deploy/helm/wordpress/values-aks.yaml \
+            --set-string "image=$PUBLISHED_IMAGE" \
+            --wait=legacy --rollback-on-failure --timeout 5m
+
+          kubectl -n wordpress rollout status deployment/wordpress --timeout=120s
+          deployed_image="$(kubectl -n wordpress get deployment wordpress \
+            -o jsonpath='{.spec.template.spec.containers[?(@.name=="wordpress")].image}')"
+          if [[ "$deployed_image" != "$PUBLISHED_IMAGE" ]]; then
+            echo "::error::The deployed image does not match the published digest."
+            exit 1
+          fi
+          printf 'Deployed image: %s\n' "$deployed_image" >> "$GITHUB_STEP_SUMMARY"
