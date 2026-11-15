@@ -1,0 +1,43 @@
+name: Build and scan the WordPress image
+description: Build the deployment image and block High or Critical vulnerabilities with a fix available.
+inputs:
+  image:
+    description: Local Docker tag to build and scan.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Build the image
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+      run: docker build --platform linux/amd64 --tag "$IMAGE" .
+
+    - name: Install Trivy
+      uses: aquasecurity/setup-trivy@e07451d2e059ed86c2870430ea286b3a9e0bf241
+      with:
+        version: v0.76.2
+
+    - name: Generate the vulnerability report
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+      run: |
+        trivy image --image-src docker --scanners vuln \
+          --format json --output "$RUNNER_TEMP/wordpress-trivy-report.json" \
+          "$IMAGE"
+
+    - name: Save the vulnerability report
+      uses: actions/upload-artifact@v7
+      with:
+        name: trivy-report
+        path: ${{ runner.temp }}/wordpress-trivy-report.json
+
+    - name: Block fixable High and Critical vulnerabilities
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+      run: |
+        trivy image --image-src docker --scanners vuln \
+          --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "$IMAGE"

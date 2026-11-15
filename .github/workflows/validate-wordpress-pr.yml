@@ -1,0 +1,23 @@
+name: Validate WordPress PR
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Build and scan WordPress
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build and scan the PR image
+        uses: ./.github/actions/build-scan-wordpress
+        with:
+          image: wordpress-ci:pr
