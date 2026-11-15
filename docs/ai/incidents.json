@@ -1,0 +1,64 @@
+{
+  "cases": [
+    {
+      "id": "gateway-dimension",
+      "incident": {
+        "symptom": "The availability drill shows no fired alerts after its threshold was raised to two.",
+        "observations": [
+          "The enabled rule reports Backend: wordpress-pool~wordpress-http.",
+          "Application Gateway sends live WordPress traffic to wordpress-aks-pool.",
+          "The WordPress readiness URL responds successfully."
+        ]
+      },
+      "expected": {"cause": "alert-wrong-backend", "first_check": "alert-dimension"}
+    },
+    {
+      "id": "key-vault-mount",
+      "incident": {
+        "symptom": "A temporary Key Vault test pod is scheduled, but its container never starts.",
+        "observations": [
+          "Kubelet reports mkdirat on /run/secrets/kubernetes.io: read-only file system.",
+          "The failing mount is the projected Kubernetes service-account volume.",
+          "The test container mounted a Key Vault CSI volume read-only at /run/secrets."
+        ]
+      },
+      "expected": {"cause": "csi-mount-overlap", "first_check": "pod-events"}
+    },
+    {
+      "id": "interrupted-plan",
+      "incident": {
+        "symptom": "A fresh Terraform plan exits before planning any resources.",
+        "observations": [
+          "The error says the state blob is already locked.",
+          "Lock information says OperationTypePlan and names the same workstation.",
+          "The previous terminal was closed after interrupting an input prompt."
+        ]
+      },
+      "expected": {"cause": "terraform-state-lock", "first_check": "terraform-process"}
+    },
+    {
+      "id": "monitor-registration",
+      "incident": {
+        "symptom": "Terraform cannot create the Azure Monitor email action group.",
+        "observations": [
+          "Azure returns HTTP 409 with MissingSubscriptionRegistration.",
+          "The error specifies the microsoft.insights namespace.",
+          "The resource group and Application Gateway already exist."
+        ]
+      },
+      "expected": {"cause": "monitor-provider-unregistered", "first_check": "insights-provider"}
+    },
+    {
+      "id": "vmss-extension-tag",
+      "incident": {
+        "symptom": "Terraform cannot add the WordPress web-stack extension to the running VM scale set.",
+        "observations": [
+          "The VMSS extension request fails with HTTP 400 InvalidParameter.",
+          "Azure says forceUpdateTag cannot exceed 50 characters.",
+          "The Terraform plan shows a full SHA-256 hash for force_update_tag."
+        ]
+      },
+      "expected": {"cause": "vmss-extension-tag-too-long", "first_check": "vmss-force-tag"}
+    }
+  ]
+}
