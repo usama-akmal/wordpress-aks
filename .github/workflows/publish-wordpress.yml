@@ -1,0 +1,74 @@
+name: Publish WordPress image
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+      IMAGE_NAME: wordpress
+      IMAGE_TAG: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build the image
+        run: |
+          docker build --platform linux/amd64 \
+            --tag "$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG" .
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@e07451d2e059ed86c2870430ea286b3a9e0bf241
+        with:
+          version: v0.76.2
+
+      - name: Generate the vulnerability report
+        run: |
+          trivy image --image-src docker --scanners vuln \
+            --format json --output trivy-report.json \
+            "$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG"
+
+      - name: Save the vulnerability report
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-report
+          path: trivy-report.json
+
+      - name: Block fixable High and Critical vulnerabilities
+        run: |
+          trivy image --image-src docker --scanners vuln \
+            --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+            "$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG"
+
+      - name: Sign in to Azure through OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Push and lock the image
+        run: |
+          registry_name="${ACR_LOGIN_SERVER%%.*}"
+          image_tag="$IMAGE_NAME:$IMAGE_TAG"
+
+          az acr login --name "$registry_name"
+          docker push "$ACR_LOGIN_SERVER/$image_tag"
+
+          az acr repository update --name "$registry_name" \
+            --image "$image_tag" \
+            --write-enabled false --delete-enabled false --output none
+
+          digest="$(az acr repository show --name "$registry_name" \
+            --image "$image_tag" --query digest --output tsv)"
+          printf 'Published image: `%s/%s@%s`\n' \
+            "$ACR_LOGIN_SERVER" "$IMAGE_NAME" "$digest" >> "$GITHUB_STEP_SUMMARY"
