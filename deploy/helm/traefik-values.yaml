@@ -1,0 +1,27 @@
+ingressClass:
+  enabled: true
+  isDefaultClass: false
+  name: wordpress-internal
+
+providers:
+  kubernetesCRD:
+    enabled: false
+  kubernetesIngress:
+    enabled: true
+    ingressClass: wordpress-internal
+    namespaces:
+      - wordpress
+
+ports:
+  websecure:
+    expose:
+      default: false
+
+service:
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  spec:
+    type: LoadBalancer
+    externalTrafficPolicy: Local
+    loadBalancerSourceRanges:
+      - 10.40.2.0/24
