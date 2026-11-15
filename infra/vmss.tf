@@ -42,7 +42,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "wordpress" {
       subnet_id = azurerm_subnet.application.id
 
       application_gateway_backend_address_pool_ids = [
-        one(azurerm_application_gateway.wordpress.backend_address_pool).id
+        "${azurerm_application_gateway.wordpress.id}/backendAddressPools/wordpress-pool"
       ]
     }
   }

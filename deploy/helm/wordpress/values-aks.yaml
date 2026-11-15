@@ -6,3 +6,6 @@ keyVault:
   clientId: "ad0f81d5-df94-4c8f-9827-9aab9225f5f5"
   tenantId: "a7a2dc3d-d5f7-4e0c-99a2-48a4c37c37a0"
   dbPasswordSecret: "wordpress-db-password"
+
+ingress:
+  host: "wp-36536035c2eb.westus2.cloudapp.azure.com"

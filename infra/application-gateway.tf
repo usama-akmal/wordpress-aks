@@ -145,12 +145,11 @@ resource "azurerm_application_gateway" "wordpress" {
   }
 
   request_routing_rule {
-    name                       = "wordpress-routing"
-    priority                   = 100
-    rule_type                  = "Basic"
-    http_listener_name         = "http-listener"
-    backend_address_pool_name  = "wordpress-pool"
-    backend_http_settings_name = "wordpress-http"
+    name               = "wordpress-routing"
+    priority           = 100
+    rule_type          = "PathBasedRouting"
+    http_listener_name = "http-listener"
+    url_path_map_name  = "wordpress-backends"
   }
 
   depends_on = [
@@ -160,9 +159,53 @@ resource "azurerm_application_gateway" "wordpress" {
   tags = {
     project = "wordpress-aks"
   }
+
+  backend_address_pool {
+    name         = "wordpress-aks-pool"
+    ip_addresses = ["10.224.0.5"]
+  }
+
+  probe {
+    name                = "wordpress-aks-probe"
+    protocol            = "Http"
+    host                = azurerm_public_ip.gateway.fqdn
+    path                = "/ready.php"
+    interval            = 30
+    timeout             = 10
+    unhealthy_threshold = 3
+
+    match {
+      status_code = ["200"]
+      body        = "ready"
+    }
+  }
+
+  backend_http_settings {
+    name                  = "wordpress-aks-http"
+    cookie_based_affinity = "Disabled"
+    port                  = 80
+    protocol              = "Http"
+    request_timeout       = 30
+    probe_name            = "wordpress-aks-probe"
+  }
+
+  url_path_map {
+    name                               = "wordpress-backends"
+    default_backend_address_pool_name  = "wordpress-pool"
+    default_backend_http_settings_name = "wordpress-http"
+
+    path_rule {
+      name                       = "aks-readiness"
+      paths                      = ["/ready.php"]
+      backend_address_pool_name  = "wordpress-aks-pool"
+      backend_http_settings_name = "wordpress-aks-http"
+    }
+  }
 }
 
 output "wordpress_url" {
   description = "Lab HTTP endpoint, initially restricted to the configured client IP."
   value       = "http://${azurerm_public_ip.gateway.fqdn}"
 }
+
+
