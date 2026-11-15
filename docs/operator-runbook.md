@@ -2,6 +2,15 @@
 
 The WordPress Helm release and namespace are both `wordpress`. The AKS cluster is `aks-k8s-lab` in `rg-k8s-lab`. Application Gateway and MySQL are in `rg-final-project`.
 
+## Deploy a change to the existing environment
+
+This workflow needs the provisioned AKS cluster, the `wordpress` Helm release, and the project's ACR registry. Before the first run in a repository, configure the GitHub Actions variables `ACR_LOGIN_SERVER`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`. Confirm that the Azure identity has a federated credential for the repository's `main` branch and permission to publish to ACR and deploy the release in AKS.
+
+1. Create a feature branch from the latest `main`. Commit the change and push the branch.
+2. Open a pull request, review the diff, and wait for the PR validation checks to pass. Merge through GitHub.
+3. Open **Actions → Publish and deploy WordPress** and select the run for that merge. The workflow builds and scans the image, publishes it to ACR, and upgrades the Helm release with the published digest.
+4. In the run summary, verify that **Published image** and **Deployed image** match. Run the release checks below and confirm that the expected change is visible.
+
 ## Verify a release
 
 Use the Azure CLI-authenticated Kubernetes context for `aks-k8s-lab`. Check the context before running any cluster command.
@@ -24,6 +33,11 @@ curl --fail --silent --show-error --location --max-time 20 \
 ```
 
 Expect two ready replicas, a `Bound` uploads claim, the exact `@sha256:` image reference in the GitHub Actions release output, and a final HTTP 2xx response.
+
+## Interpret alerts
+
+- **Application Gateway backend health.** `wordpress-aks-backend-unavailable` fires when the average `HealthyHostCount` for `wordpress-aks-pool~wordpress-aks-http` falls below the configured threshold over five minutes. Check gateway backend health first, then follow the outage steps below. A firing alert describes what the gateway sees and does not identify the failing component by itself.
+- **Azure budget.** A budget email reports that actual costs reached a configured spending threshold. Confirm the scope and threshold in the email, check Cost Analysis for the resource driving the change, and use the teardown steps for resources the project no longer needs. See [Azure cost evidence](azure-costs.md) for the budget configuration.
 
 ## Investigate an outage or failed deployment
 
