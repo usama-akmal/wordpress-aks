@@ -1,0 +1,27 @@
+{
+  "label": "aks-after",
+  "url": "http://wp-36536035c2eb.westus2.cloudapp.azure.com",
+  "started_at_utc": "2026-11-15T11:01:18.785089+00:00",
+  "finished_at_utc": "2026-11-15T11:03:27.309070+00:00",
+  "client_platform": "macOS-26.6.2-arm64-arm-64bit",
+  "samples": 30,
+  "warmup_requests": 3,
+  "concurrency": 1,
+  "pause_seconds": 0.2,
+  "socket_timeout_seconds": 10.0,
+  "successes": 30,
+  "failures": 0,
+  "error_rate_percent": 0.0,
+  "latency_scope": "Successful final 2xx responses, including full HTML body; redirects followed.",
+  "mean_ms": 3626.329,
+  "median_ms": 3579.091,
+  "p95_ms": 4271.439,
+  "min_ms": 3472.645,
+  "max_ms": 4314.795,
+  "limitations": [
+    "Small sequential sample; no concurrent load or capacity measurement.",
+    "Does not fetch images, JavaScript, or CSS or measure browser rendering.",
+    "Public-network latency and cache state affect results.",
+    "p95 uses nearest rank over successful requests only; failures are reported separately."
+  ]
+}
