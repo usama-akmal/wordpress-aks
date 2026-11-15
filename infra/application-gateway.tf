@@ -145,11 +145,12 @@ resource "azurerm_application_gateway" "wordpress" {
   }
 
   request_routing_rule {
-    name               = "wordpress-routing"
-    priority           = 100
-    rule_type          = "PathBasedRouting"
-    http_listener_name = "http-listener"
-    url_path_map_name  = "wordpress-backends"
+    name                       = "wordpress-routing"
+    priority                   = 100
+    rule_type                  = "Basic"
+    http_listener_name         = "http-listener"
+    backend_address_pool_name  = "wordpress-aks-pool"
+    backend_http_settings_name = "wordpress-aks-http"
   }
 
   depends_on = [
@@ -188,24 +189,9 @@ resource "azurerm_application_gateway" "wordpress" {
     request_timeout       = 30
     probe_name            = "wordpress-aks-probe"
   }
-
-  url_path_map {
-    name                               = "wordpress-backends"
-    default_backend_address_pool_name  = "wordpress-pool"
-    default_backend_http_settings_name = "wordpress-http"
-
-    path_rule {
-      name                       = "aks-readiness"
-      paths                      = ["/ready.php"]
-      backend_address_pool_name  = "wordpress-aks-pool"
-      backend_http_settings_name = "wordpress-aks-http"
-    }
-  }
 }
 
 output "wordpress_url" {
   description = "Lab HTTP endpoint, initially restricted to the configured client IP."
   value       = "http://${azurerm_public_ip.gateway.fqdn}"
 }
-
-
