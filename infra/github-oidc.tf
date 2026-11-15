@@ -23,3 +23,14 @@ output "github_actions_client_id" {
   description = "Client ID for GitHub Actions OIDC login."
   value       = azurerm_user_assigned_identity.github_actions.client_id
 }
+
+data "azurerm_resource_group" "aks_lab" {
+  name = "rg-k8s-lab"
+}
+
+resource "azurerm_role_assignment" "github_aks_cluster_user" {
+  scope                = "${data.azurerm_resource_group.aks_lab.id}/providers/Microsoft.ContainerService/managedClusters/aks-k8s-lab"
+  role_definition_name = "Azure Kubernetes Service Cluster User Role"
+  principal_id         = azurerm_user_assigned_identity.github_actions.principal_id
+  principal_type       = "ServicePrincipal"
+}
