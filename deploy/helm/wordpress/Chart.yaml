@@ -1,0 +1,5 @@
+apiVersion: v2
+name: wordpress
+description: WordPress on Azure Kubernetes Service
+type: application
+version: 0.1.0
