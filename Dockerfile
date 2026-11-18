@@ -22,6 +22,8 @@ COPY --chown=0:33 --chmod=640 docker/wp-config.php /var/www/html/wp-config.php
 
 WORKDIR /var/www/html
 
+COPY --chmod=0644 docker/demo-release.txt /var/www/html/demo-release.txt
+
 # Debian's www-data identity, expressed numerically for Kubernetes validation.
 USER 33:33
 
